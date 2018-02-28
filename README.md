@@ -24,6 +24,36 @@ to the backers of the Dog Mendonça Kickstarter campaign.
 
 Here be dragons.
 
+Because Escoria is in development, it's sometimes hard to keep track of master
+changes in a development branch without mudding the history with merges and other
+noise. I try to keep the log fairly clean here, which means I rebase a lot and
+sometimes squash eg. ProjectSettings.
+
+This may lead to situations where something is configured in the branch
+"before" it was implemented in the submodule. This may also mean that some
+submodule-related commits point to code that doesn't belong to a relevant
+branch anymore.
+
+This kind of behavior from a developer is a fireable offence in working life,
+for obvious reasons. Yet as an attempt to show the minimum workflow for an
+Escoria game, it's a better demonstration than 1024 criss-crossing commits.
+
+So look at the commit history but don't bother bisecting it ;)
+
+To use https://github.com/mjtorn/escoria/tree/devel you want either
+
+    $ git clone https://github.com/mjtorn/escoria/ --recurse-submodules
+
+to view all the code, but you have to `git checkout -b devel origin/devel` to see where the money at.
+
+Alternatively you can use
+
+    $ git clone https://github.com/mjtorn/escoria/ --recurse-submodules -b devel
+
+to get there by default.
+
+(These instructions shall never be merged to the upstream master!)
+
 ## Documentation
 
 This repository contains some basic documentation in the `doc` folder.
