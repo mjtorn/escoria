@@ -41,7 +41,7 @@ func input(event):
 
 	var player = vm.get_object("player")
 	# Get mouse position, since event.position only works with Area2D exits
-	var pos = get_viewport().get_mouse_position()
+	var pos = get_global_mouse_position()
 
 	if player and event.doubleclick:
 		player.set_position(pos)
