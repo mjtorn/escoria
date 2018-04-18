@@ -1,0 +1,5 @@
+:enter
+say player enter_first_hotspot:"I entered the first hotspot"
+
+:exit
+say player hotspot_first_hotspot:"I exited the first hotspot"
