@@ -16,6 +16,7 @@ export var active = true setget set_active,get_active
 export var placeholders = {}
 export var use_custom_z = false
 
+var animation_is_spine
 var anim_notify = null
 var anim_scale_override = null
 
@@ -188,6 +189,37 @@ func global_changed(name):
 	elif "global_changed" in event_table:
 		run_event(event_table.global_changed)
 
+func _animation_play(args):
+	if !animation:
+		return
+
+	assert(typeof(args) == TYPE_DICTIONARY)
+
+	## Then tackle the hard part, though name must always be present
+	var name = args["name"]
+
+	if !animation_is_spine:
+		# play(String name=”“, float custom_blend=-1, float custom_speed=1.0, bool from_end=false)
+		var custom_blend = args["custom_blend"] if args.has("custom_blend") else -1
+		var custom_speed = args["custom_speed"] if args.has("custom_speed") else 1.0
+		var from_end = args["from_end"] if args.has("from_end") else false
+
+		animation.play(name, custom_blend, custom_speed, from_end)
+	else:
+		# play(const String &p_name, bool p_loop, int p_track, int p_delay)
+		var loop = args["loop"] if args.has("loop") else false
+		var track = args["track"] if args.has("track") else 0
+		var delay = args["delay"] if args.has("delay") else 0
+
+		animation.play(name, loop, track, delay)
+
+func _animation_get_current_animation():
+	if !animation:
+		return
+
+	# XXX: Spine defaults to track 0
+	return animation.get_current_animation()
+
 func anim_get_ph_paths(p_anim):
 	if !(p_anim in placeholders):
 		return null
@@ -201,11 +233,8 @@ func anim_get_ph_paths(p_anim):
 	return ret
 
 func play_anim(p_anim, p_notify = null, p_reverse = false, p_flip = null):
-
-	if p_notify == null && (!has_node("animation") || !get_node("animation").has_animation(p_anim)):
-		print("skipping cut scene '", p_anim, "'")
+	if p_notify == null && (!animation || !animation.has_animation(p_anim)):
 		vm.finished(p_notify)
-		#_debug_states()
 		return
 
 	if p_anim in placeholders:
@@ -226,30 +255,29 @@ func play_anim(p_anim, p_notify = null, p_reverse = false, p_flip = null):
 		anim_scale_override = null
 
 	if p_reverse:
-		get_node("animation").play(p_anim, -1, -1, true)
+		if animation_is_spine:
+			# Spine is too "advanced" to have a simple mechanism for reversing an animation
+			# https://github.com/EsotericSoftware/spine-runtimes/issues/203 probably related
+			printt("Not implemented")
+			assert(0)
+		_animation_play({"name": p_anim, "custom_blend": -1, "custom_speed": -1.0, "from_end": true})
 	else:
-		get_node("animation").play(p_anim)
+		_animation_play({"name": p_anim})
+		if animation_is_spine:
+			animation.add(animations.idles[last_dir], true)
+
 	anim_notify = p_notify
-
-	#_debug_states()
-
 
 func set_speaking(p_speaking):
 	printt("item set speaking! ", global_id, p_speaking, state)
-	#print_stack()
-	if !has_node("animation"):
-		return
 	if talk_animation == "":
 		return
 	if p_speaking:
-		if get_node("animation").has_animation(talk_animation):
-			get_node("animation").play(talk_animation)
-			get_node("animation").seek(0, true)
-		#else:
-		#	set_state(state, true)
+		if animation.has_animation(talk_animation):
+			_animation_play({"name": talk_animation})
 	else:
-		if get_node("animation").is_playing():
-			get_node("animation").stop()
+		if animation.is_playing():
+			animation.stop()
 		set_state(state, true)
 	pass
 
@@ -259,14 +287,21 @@ func set_state(p_state, p_force = false):
 
 	# printt("set state ", "global_id: ", global_id, "state: ", state, "p_state: ", p_state, "p_force: ", p_force)
 
-	if has_node("animation"):
-		get_node("animation").stop()
+	var node = get_node(p_state)
+	var animation = $"animation"
+
+	if animation:
+		animation.stop()
+
 	state = p_state
-	if animation != null:
+
+	if animation:
+		assert(animation is AnimationPlayer || animation.get_class() == "Spine")
+
 		if animation.is_playing() && animation.get_current_animation() == p_state:
 			return
 		if animation.has_animation(p_state):
-			animation.play(p_state)
+			_animation_play({"name": p_state})
 
 func teleport(obj):
 	set_position(obj.get_global_pos())
@@ -366,8 +401,14 @@ func _ready():
 		event_table = vm.compile(events_path)
 	if global_id != "":
 		vm.register_object(global_id, self)
-	if has_node("animation"):
-		get_node("animation").connect("animation_finished", self, "anim_finished")
+
+	if animation:
+		# Spine support
+		animation_is_spine = animation.get_class() == "Spine"
+		if animation_is_spine:
+			animation.connect("animation_end", self, "anim_finished")
+		else:
+			animation.connect("animation_finished", self, "anim_finished")
 
 	_check_focus(false, false)
 
