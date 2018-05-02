@@ -169,6 +169,9 @@ set_globals i/* false
 - `sched_event time object event`
   Schedules the execution of an "event" found in "object" in a time in seconds. If another event is running at the time, execution starts when the running event ends.
 
+- `set_costume character costume`
+  Dress "character" in costume identified by "costume". Requires an animation in the character's node with that name, although "animation" is always the fallback when trying set a missing costume.
+
 - `camera_set_pos speed x y`
   Moves the camera to a position defined by "x" and "y", at the speed defined by "speed" in pixels per second. If speed is 0, camera is teleported to the position.
 
